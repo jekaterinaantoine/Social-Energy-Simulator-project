@@ -6,8 +6,9 @@ import {
   FlatList,
   Dimensions,
   TouchableOpacity,
+  ScrollView,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Card, FAB, Portal, Modal } from "react-native-paper";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 import { Swipeable } from "react-native-gesture-handler";
@@ -48,118 +49,136 @@ function SimulateScreen() {
   const [selectedActivities, setSelectedActivities] = useState([]);
 
   const addSimActivity = (activity) => {
-    setSelectedActivities((prev) => [activity, ...prev]);
+    const uniqueItem = { ...activity, uniqueId: Date.now() + Math.random() };
+    setSelectedActivities((prev) => [uniqueItem, ...prev]);
     setSimEnergy((prev) => Math.min(100, Math.max(0, prev + activity.change)));
   };
 
-  const deleteSimActivity = (id) => {
+  const deleteSimActivity = (uniqueId) => {
     setSelectedActivities((prev) => {
-      const act = prev.find((a) => a.id === id);
+      const act = prev.find((a) => a.uniqueId === uniqueId);
       if (act)
         setSimEnergy((prevEnergy) =>
           Math.min(100, Math.max(0, prevEnergy - act.change)),
         );
-      return prev.filter((a) => a.id !== id);
+      return prev.filter((a) => a.uniqueId !== uniqueId);
     });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.sectionTitle}>PROJECTED ENERGY</Text>
-      <Text style={styles.sectionText}>TEST YOUR ENERGY WITH DIFFERENT ACTIVITIES</Text>
-      {/* Projected Energy Meter */}
-      <View style={styles.energyContainer}>
-        <AnimatedCircularProgress
-          size={210}
-          width={16}
-          fill={simEnergy}
-          tintColor={getEnergyColor(simEnergy)}
-          backgroundColor="#EAEAEA"
-          rotation={0}
-          lineCap="round"
-        >
-          {(fill) => (
-            <Text style={[styles.energyText, { color: getEnergyColor(fill) }]}>
-              {Math.round(fill)}%
-            </Text>
-          )}
-        </AnimatedCircularProgress>
-      </View>
-
-      {/* Horizontal Circular Cards */}
-      <Text style={styles.sectionTitle}>
-        AVAILABLE ACTIVITIES
-      </Text>
-      <FlatList
-        data={SIMULATE_ACTIVITIES}
-        keyExtractor={(item) => item.id}
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 10 }}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.circleCard}
-            onPress={() => addSimActivity(item)}
+    <SafeAreaProvider>
+    <SafeAreaView style={styles.safeArea}>
+    <ScrollView style={styles.scrollContainer}>
+      <View style={styles.safeArea}>
+      <View style={styles.container}>
+        <Text style={styles.sectionTitle}>PROJECTED ENERGY</Text>
+        <Text style={styles.sectionText}>TEST YOUR ENERGY WITH DIFFERENT ACTIVITIES</Text>
+        {/* Projected Energy Meter */}
+        <View style={styles.energyContainer}>
+          <AnimatedCircularProgress
+            size={210}
+            width={16}
+            fill={simEnergy}
+            tintColor={getEnergyColor(simEnergy)}
+            backgroundColor="#EAEAEA"
+            rotation={0}
+            lineCap="round"
           >
-            <Text style={styles.circleEmoji}>{item.name}</Text>
-            <Text
-              style={[
-                styles.circleEnergy,
-                { color: item.change >= 0 ? "#2E7D32" : "#C62828" },
-              ]}
-            >
-              {item.change >= 0 ? `+${item.change}` : item.change}
-            </Text>
-          </TouchableOpacity>
-        )}
-      />
-
-      {/* Selected Activities */}
-      <Text style={styles.sectionTitle}>
-        SELECTED ACTIVITIES
-      </Text>
-      <FlatList
-        data={selectedActivities}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Swipeable
-            renderRightActions={() => (
-              <TouchableOpacity
-                style={styles.deleteButton}
-                onPress={() => deleteSimActivity(item.id)}
-              >
-                <Text style={styles.deleteButtonText}>Delete</Text>
-              </TouchableOpacity>
+            {(fill) => (
+              <Text style={[styles.energyText, { color: getEnergyColor(fill) }]}>
+                {Math.round(fill)}%
+              </Text>
             )}
-          >
-            <Card style={styles.card}>
-              <Card.Content style={styles.cardContent}>
-                <Text style={styles.cardText}>{item.name}</Text>
-                <Text
-                  style={[
-                    styles.cardText,
-                    { color: item.change >= 0 ? "#2E7D32" : "#C62828" },
-                  ]}
+          </AnimatedCircularProgress>
+        </View>
+
+        {/* Horizontal Circular Cards */}
+        <Text style={styles.sectionTitle}>
+          AVAILABLE ACTIVITIES
+        </Text>
+        <FlatList
+          data={SIMULATE_ACTIVITIES}
+          keyExtractor={(item) => item.id}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 10 }}
+          scrollEnabled={true}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.circleCard}
+              onPress={() => addSimActivity(item)}
+            >
+              <Text style={styles.circleEmoji}>{item.name}</Text>
+              <Text
+                style={[
+                  styles.circleEnergy,
+                  { color: item.change >= 0 ? "#2E7D32" : "#C62828" },
+                ]}
+              >
+                {item.change >= 0 ? `+${item.change}` : item.change}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+
+        {/* Selected Activities Section */}
+        <Text style={styles.sectionTitle}>
+          SELECTED ACTIVITIES
+        </Text>
+        <View>
+          {selectedActivities.map((item) => (
+            <Swipeable
+              key={item.uniqueId}
+              renderRightActions={() => (
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => deleteSimActivity(item.uniqueId)}
                 >
-                  {item.change >= 0 ? `+${item.change}` : item.change}
-                </Text>
-              </Card.Content>
-            </Card>
-          </Swipeable>
-        )}
-      />
+                  <Text style={styles.deleteButtonText}>Delete</Text>
+                </TouchableOpacity>
+              )}
+            >
+              <Card style={styles.card}>
+                <Card.Content style={styles.cardContent}>
+                  <Text style={styles.cardText}>{item.name}</Text>
+                  <Text
+                    style={[
+                      styles.cardText,
+                      { color: item.change >= 0 ? "#2E7D32" : "#C62828" },
+                    ]}
+                  >
+                    {item.change >= 0 ? `+${item.change}` : item.change}
+                  </Text>
+                </Card.Content>
+              </Card>
+            </Swipeable>
+          ))}
+        </View>
+      </View>
+      </View>
+    </ScrollView>
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
    safeArea: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#cec1b1bb",
+  },
+  scrollContainer: {
+    flex: 1,
+    backgroundColor: "#cec1b1bb",
   },
   container: { 
-    flex: 1, 
     backgroundColor: "#cec1b1bb",
+    paddingTop: 10,
+    paddingHorizontal: 0,
+    paddingBottom: 20,
+  },
+  topSection: {
+    paddingHorizontal: 10,
   },
   energyContainer: { 
     alignItems: "center",
