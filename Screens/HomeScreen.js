@@ -1,4 +1,12 @@
-import { View, Text, StyleSheet, FlatList, Dimensions, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Dimensions,
+  TouchableOpacity,
+  Image,
+} from "react-native";
 import React, { useState, useEffect } from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -11,20 +19,20 @@ import {
 } from "react-native-paper";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Swipeable } from 'react-native-gesture-handler';
+import { Swipeable } from "react-native-gesture-handler";
 
 const ACTIVITY_OPTIONS = [
   { id: "1", name: "🌅 Morning Walk", change: 15, category: "Physical" },
   { id: "2", name: "💪 Workout", change: 25, category: "Physical" },
-  { id: "3", name: "🧘 Meditation & Mindfulness", change: 20, category: "Mental"},
+  { id: "3", name: "🧘 Meditation & Mindfulness", change: 20, category: "Mental" },
   { id: "4", name: "📖 Reading a Book", change: 10, category: "Mental" },
   { id: "5", name: "💻 Deep Work Session", change: -15, category: "Work" },
   { id: "6", name: "🤝 Team Meeting", change: -20, category: "Work" },
   { id: "7", name: "☕️ Coffee with Friend", change: 12, category: "Social" },
   { id: "8", name: "🎮 Late Night Gaming", change: -10, category: "Lifestyle" },
-  { id: "9", name: "📱 Scrolling Social Media", change: -8, category: "Lifestyle"},
+  { id: "9", name: "📱 Scrolling Social Media", change: -8, category: "Lifestyle" },
   { id: "10", name: "😴 Quick Power Nap", change: 30, category: "Recovery" },
-  { id: "11",name: "🗣️ Friendly Debate / Argument", change: -25, category: "Social" },
+  { id: "11", name: "🗣️ Friendly Debate / Argument", change: -25, category: "Social" },
   { id: "12", name: "🍳 Cooking a Meal", change: 10, category: "Lifestyle" },
   { id: "13", name: "👨‍👩‍👧‍👦 Family Time", change: 18, category: "Social" },
   { id: "14", name: "🧘 Yoga", change: 20, category: "Physical" },
@@ -45,7 +53,8 @@ const getEnergyColor = (energy) => {
 const screenHeight = Dimensions.get("window").height;
 
 const HomeScreen = () => {
-  const [energy, setEnergy] = useState(65); // energy value 0-100%
+  const [energy, setEnergy] = useState(65); // displayed energy (base + activities)
+  const [baseEnergy, setBaseEnergy] = useState(65); // mood selected in the morning
   const [activities, setActivities] = useState([]);
   const [visible, setVisible] = useState(false);
   const [showMoodModal, setShowMoodModal] = useState(false);
@@ -55,15 +64,25 @@ const HomeScreen = () => {
     const loadData = async () => {
       const today = new Date().toISOString().split("T")[0];
       const savedDate = await AsyncStorage.getItem("lastMoodDate");
-      const savedEnergy = await AsyncStorage.getItem("todayEnergy");
+      const savedBase = await AsyncStorage.getItem("baseEnergy");
       const savedActivities = await AsyncStorage.getItem("todayActivities");
 
-      if (savedDate === today && savedEnergy) {
-        setEnergy(parseInt(savedEnergy));
+      if (savedDate === today && savedBase) {
+        const parsedBase = parseInt(savedBase);
+        setBaseEnergy(parsedBase);
+
+        const parsedActivities = savedActivities
+          ? JSON.parse(savedActivities)
+          : [];
+        setActivities(parsedActivities);
+
+        const totalChange = parsedActivities.reduce(
+          (sum, a) => sum + (a.energyChange || 0),
+          0,
+        );
+        const display = Math.min(100, Math.max(0, parsedBase + totalChange));
+        setEnergy(display);
         setShowMoodModal(false);
-        if (savedActivities) {
-          setActivities(JSON.parse(savedActivities));
-        }
       } else {
         setShowMoodModal(true);
         setActivities([]);
@@ -74,47 +93,47 @@ const HomeScreen = () => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    if (isLoading) return;
-    const today = new Date().toISOString().split("T")[0];
-    AsyncStorage.setItem("todayEnergy", energy.toString());
-    AsyncStorage.setItem("lastMoodDate", today);
-  }, [energy, isLoading]);
-
   const addActivity = (name, change) => {
-    setEnergy((prev) => Math.min(100, Math.max(0, prev + change)));
-
     const newActivity = {
       id: Date.now().toString(),
       name,
       energyChange: change,
     };
-    
+
     const updatedActivities = [newActivity, ...activities];
     setActivities(updatedActivities);
-    
-    // Save to AsyncStorage
     AsyncStorage.setItem("todayActivities", JSON.stringify(updatedActivities));
+
+    const totalChange = updatedActivities.reduce(
+      (sum, a) => sum + (a.energyChange || 0),
+      0,
+    );
+    const display = Math.min(100, Math.max(0, baseEnergy + totalChange));
+    setEnergy(display);
   };
 
   const moods = [
     { label: "😄 Amazing", value: 95 },
-    { label: "🙂 Good", value: 80 },
-    { label: "😐 Okay", value: 60 },
+    { label: "😊 Good", value: 80 },
+    { label: "🙂 Okay", value: 60 },
     { label: "😴 Tired", value: 40 },
-    { label: "😫 Exhausted", value: 20 },
+    { label: "😫 Don't even ask me!", value: 20 },
   ];
 
   const deleteActivity = (id) => {
-    setActivities(prev => {
-      const activityToDelete = prev.find(item => item.id == id)
-      if (activityToDelete) {
-        setEnergy(prevEnergy =>
-          Math.min(100, Math.max(0, prevEnergy - activityToDelete.energyChange))
-        )
-      }
-      return prev.filter (item => item.id !== id)
-    })
+    setActivities((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      AsyncStorage.setItem("todayActivities", JSON.stringify(updated));
+
+      const totalChange = updated.reduce(
+        (sum, a) => sum + (a.energyChange || 0),
+        0,
+      );
+      const display = Math.min(100, Math.max(0, baseEnergy + totalChange));
+      setEnergy(display);
+
+      return updated;
+    });
   };
 
   return (
@@ -122,7 +141,9 @@ const HomeScreen = () => {
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
           <Text style={styles.sectionTitle}>YOUR CURRENT ENERGY LEVEL</Text>
-          <Text style={styles.sectionText}>TRACK YOUR ENERGY AND TODAY'S ACTIVITIES</Text>
+          <Text style={styles.sectionText}>
+            TRACK YOUR ENERGY AND TODAY'S ACTIVITIES
+          </Text>
           {/* Energy Meter */}
           <View style={styles.energyContainer}>
             <AnimatedCircularProgress
@@ -152,38 +173,54 @@ const HomeScreen = () => {
 
           {/* Today’s Activities */}
           <Text style={styles.sectionTitle}>TODAY'S MOVES</Text>
-
-<FlatList
-  data={activities}
-  keyExtractor={(item) => item.id}
-  renderItem={({ item }) => (
-    <Swipeable
-      renderRightActions={() => (
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => deleteActivity(item.id)}
-        >
-          <Text style={styles.deleteButtonText}>Delete</Text>
-        </TouchableOpacity>
-      )}
-    >
-      <Card style={styles.card}>
-        <Card.Content style={styles.cardContent}>
-          <Text style={styles.cardText}>{item.name}</Text>
-          <Text
-            style={[
-              styles.cardText,
-              { color: item.energyChange >= 0 ? '#2E7D32' : '#C62828' },
-            ]}
-          >
-            {item.energyChange >= 0 ? '+' : ''}
-            {item.energyChange}
-          </Text>
-        </Card.Content>
-      </Card>
-    </Swipeable>
-  )}
-/>
+          <View>
+            {activities.length == 0 && (
+              <View style={styles.emptyPlaceholder}>
+                <Text style={styles.emptyText}>No activities selected at the moment</Text>
+                <View style={styles.emptyContent}>
+                  <Text style={styles.emptyQuestion}>BOOST OR BURN?</Text>
+                  <Image
+                    source={require("../assets/pics/smirk.png")}
+                    style={styles.image}
+                  />
+                </View>
+              </View>
+            )}
+            <FlatList
+              data={activities}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <Swipeable
+                  renderRightActions={() => (
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => deleteActivity(item.id)}
+                    >
+                      <Text style={styles.deleteButtonText}>Delete</Text>
+                    </TouchableOpacity>
+                  )}
+                >
+                  <Card style={styles.card}>
+                    <Card.Content style={styles.cardContent}>
+                      <Text style={styles.cardText}>{item.name}</Text>
+                      <Text
+                        style={[
+                          styles.cardText,
+                          {
+                            color:
+                              item.energyChange >= 0 ? "#2E7D32" : "#C62828",
+                          },
+                        ]}
+                      >
+                        {item.energyChange >= 0 ? "+" : ""}
+                        {item.energyChange}
+                      </Text>
+                    </Card.Content>
+                  </Card>
+                </Swipeable>
+              )}
+            />
+          </View>
 
           <FAB
             icon="plus"
@@ -226,9 +263,7 @@ const HomeScreen = () => {
           {/* Mood Modal */}
           <Portal>
             <Modal visible={showMoodModal} contentContainerStyle={styles.modal}>
-              <Text style={styles.modalTitle}>
-                HOW IS YOUR ENERGY TODAY?
-              </Text>
+              <Text style={styles.modalTitle}>HOW IS YOUR ENERGY TODAY?</Text>
 
               <View style={styles.modalListContainer}>
                 <FlatList
@@ -241,14 +276,18 @@ const HomeScreen = () => {
                       onPress={async () => {
                         const today = new Date().toISOString().split("T")[0];
 
+                        setBaseEnergy(item.value);
                         setEnergy(item.value);
 
                         await AsyncStorage.setItem("lastMoodDate", today);
                         await AsyncStorage.setItem(
-                          "todayEnergy",
+                          "baseEnergy",
                           item.value.toString(),
                         );
-                        await AsyncStorage.setItem("todayActivities", JSON.stringify([]));
+                        await AsyncStorage.setItem(
+                          "todayActivities",
+                          JSON.stringify([]),
+                        );
 
                         setShowMoodModal(false);
                       }}
@@ -345,7 +384,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    fontSize: 22,
+    fontSize: 16,
     fontFamily: "Montserrat_400Regular",
     marginBottom: 16,
     color: "#75624b",
@@ -375,21 +414,49 @@ const styles = StyleSheet.create({
   },
 
   deleteButton: {
-    backgroundColor: '#c34343ff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#c34343ff",
+    justifyContent: "center",
+    alignItems: "center",
     width: 80,
     marginVertical: 5,
     marginBottom: 1,
-    marginTop:1,
-},
+    marginTop: 1,
+  },
 
-deleteButtonText: {
-  color: '#fff',
-  fontWeight: 'bold',
-  fontSize: 16,
-  fontFamily: "Montserrat_400Regular",
-},
+  deleteButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+    fontFamily: "Montserrat_400Regular",
+  },
+  emptyPlaceholder: {
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 0,
+    paddingVertical: 0,
+  },
+  emptyContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+    emptyText: {
+    color: "#75624b",
+    fontFamily: "Montserrat_400Regular",
+    fontSize: 16,
+  },
+  emptyQuestion: {
+    color: "#75624b",
+    fontFamily: "Montserrat_700Bold",
+    fontSize: 16,
+    letterSpacing: 2,
+    marginBottom: 12,
+    marginTop:24,
+  },
+  image: {
+    width: 80,
+    height: 80,
+    resizeMode: "contain",
+  },
 });
 
 export default HomeScreen;
