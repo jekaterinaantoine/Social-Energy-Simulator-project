@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { BottomNavigation, Text, Provider } from "react-native-paper";
-import { StyleSheet, View } from "react-native";
+import { BottomNavigation, Provider } from "react-native-paper";
+import { StyleSheet } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import {
@@ -15,22 +15,28 @@ SplashScreen.preventAutoHideAsync();
 import HomeScreen from "./Screens/HomeScreen";
 import SimulateScreen from "./Screens/SimulateScreen";
 import InsightsScreen from "./Screens/InsightsScreen";
+import WelcomeScreen from "./Screens/WelcomeScreen";
 
 const App = () => {
-  const [someData, setSomeData] = useState("banana");
+  // Shared state: today’s activities, used by Home & Insights
+  const [todayActivities, setTodayActivities] = useState([]);
+  // Welcome screen visibility
+  const [showWelcome, setShowWelcome] = useState(true);
 
+  //Fonts and splash screen handling
   const [fontsLoaded, fontError] = useFonts({
     Montserrat_400Regular,
     Montserrat_700Bold,
   });
 
   useEffect(() => {
+    // Hide splash as soon as fonts are ready (or font loading failed)
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
 
-  // state with active route and labels/icons for routes
+  // Bottom navigation state
   const [state, setState] = useState({
     index: 0,
     routes: [
@@ -44,19 +50,25 @@ const App = () => {
     ],
   });
 
+  // Prevent render until fonts are available
   if (!fontsLoaded && !fontError) {
     return null;
   }
 
-  // update route index in state
+  // Update selected tab
   const handleIndexChange = (index) => setState({ ...state, index });
 
-  // linking keys from state to routes
+  // Scene mapping: wires navigation tabs to screen components
   const renderScene = BottomNavigation.SceneMap({
-    home: HomeScreen,
+    home: () => <HomeScreen setTodayActivities={setTodayActivities} />,
     simulate: SimulateScreen,
-    insights: InsightsScreen,
+    insights: () => <InsightsScreen activitiesLog={todayActivities} />,
   });
+
+  // Show welcome screen first, if enabled
+  if (showWelcome) {
+    return <WelcomeScreen onFinish={() => setShowWelcome(false)} />;
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

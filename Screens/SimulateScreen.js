@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#cec1b1bb",
   },
   container: {
-    paddingTop: 40,
+    paddingTop: 20,
     paddingHorizontal: 0,
     paddingBottom: 20,
   },
@@ -226,10 +226,10 @@ const styles = StyleSheet.create({
     fontFamily: "Montserrat_400Regular",
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     textAlign: "center",
     marginBottom: 20,
-    fontFamily: "Montserrat_400Regular",
+    fontFamily: "Montserrat_700Bold",
     color: "#75624b",
     letterSpacing: 2,
   },
