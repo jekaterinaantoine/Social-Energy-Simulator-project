@@ -25,12 +25,7 @@ import { Swipeable } from "react-native-gesture-handler";
 const ACTIVITY_OPTIONS = [
   { id: "1", name: "🌅 Morning Walk", change: 15, category: "Physical" },
   { id: "2", name: "💪 Workout", change: 25, category: "Physical" },
-  {
-    id: "3",
-    name: "🪷 Meditation & Mindfulness",
-    change: 20,
-    category: "Mental",
-  },
+  { id: "3", name: "🪷 Meditation & Mindfulness", change: 20, category: "Mental" },
   { id: "4", name: "📖 Reading a Book", change: 10, category: "Mental" },
   { id: "5", name: "💻 Deep Work Session", change: -15, category: "Work" },
   { id: "6", name: "🤝 Team Meeting", change: -20, category: "Work" },
@@ -138,7 +133,7 @@ const HomeScreen = ({setTodayActivities}) => {
   };
 
   const moods = [
-    { label: "😄 Amazing", value: 95 },
+    { label: "😎 Amazing", value: 95 },
     { label: "😊 Good", value: 80 },
     { label: "🙂 Okay", value: 60 },
     { label: "😴 Tired", value: 40 },
@@ -180,10 +175,6 @@ const HomeScreen = ({setTodayActivities}) => {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
-        {/* wrap the entire screen in a ScrollView so the UI can scroll when
-             the content grows taller than the screen.  we also add a
-             contentContainerStyle with flexGrow so the inner view expands to
-             fill available space and the FAB stays at the bottom. */}
         <ScrollView
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}

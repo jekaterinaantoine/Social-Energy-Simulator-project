@@ -15,7 +15,7 @@ const WelcomeScreen = ({ onFinish }) => {
     // Auto-finish after 2.5 seconds
     const timer = setTimeout(() => {
       onFinish();
-    }, 2500);
+    }, 3000);
 
     return () => clearTimeout(timer);
   }, []);
