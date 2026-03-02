@@ -69,8 +69,8 @@ const getEnergyColor = (energy) => {
 const screenHeight = Dimensions.get("window").height;
 
 const HomeScreen = ({setTodayActivities}) => {
-  const [energy, setEnergy] = useState(65); // displayed energy (base + activities)
-  const [baseEnergy, setBaseEnergy] = useState(65); // mood selected in the morning
+  const [energy, setEnergy] = useState(0); // displayed energy (base + activities)
+  const [baseEnergy, setBaseEnergy] = useState(0); // mood selected in the morning
   const [activities, setActivities] = useState([]);
   const [visible, setVisible] = useState(false);
   const [showMoodModal, setShowMoodModal] = useState(false);
@@ -198,6 +198,7 @@ const HomeScreen = ({setTodayActivities}) => {
                 backgroundColor="#EAEAEA"
                 rotation={0}
                 lineCap="round"
+                duration={500}
               >
                 {(fill) => {
                   let emoji = "⚡"; // default
