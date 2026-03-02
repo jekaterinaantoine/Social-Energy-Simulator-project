@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   Image,
   ScrollView,
+  Easing,
+  Animated,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import {
   Card,
@@ -25,7 +27,12 @@ import { Swipeable } from "react-native-gesture-handler";
 const ACTIVITY_OPTIONS = [
   { id: "1", name: "🌅 Morning Walk", change: 15, category: "Physical" },
   { id: "2", name: "💪 Workout", change: 25, category: "Physical" },
-  { id: "3", name: "🪷 Meditation & Mindfulness", change: 20, category: "Mental" },
+  {
+    id: "3",
+    name: "🪷 Meditation & Mindfulness",
+    change: 20,
+    category: "Mental",
+  },
   { id: "4", name: "📖 Reading a Book", change: 10, category: "Mental" },
   { id: "5", name: "💻 Deep Work Session", change: -15, category: "Work" },
   { id: "6", name: "🤝 Team Meeting", change: -20, category: "Work" },
@@ -88,6 +95,9 @@ const HomeScreen = ({ setTodayActivities }) => {
   const [showMoodModal, setShowMoodModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const maxEnergyAnim = useRef(new Animated.Value(0)).current;
+  const [showMaxEnergy, setShowMaxEnergy] = useState(false);
+
   const moods = [
     { label: "😎 Amazing", value: 95 },
     { label: "😊 Good", value: 80 },
@@ -107,7 +117,9 @@ const HomeScreen = ({ setTodayActivities }) => {
         const parsedBase = parseInt(savedBase);
         setBaseEnergy(parsedBase);
 
-        const parsedActivities = savedActivities ? JSON.parse(savedActivities) : [];
+        const parsedActivities = savedActivities
+          ? JSON.parse(savedActivities)
+          : [];
         setActivities(parsedActivities);
 
         setEnergy(calcEnergy(parsedBase, parsedActivities));
@@ -121,6 +133,19 @@ const HomeScreen = ({ setTodayActivities }) => {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (energy === 100) {
+      setShowMaxEnergy(true);
+      maxEnergyAnim.setValue(0);
+      Animated.timing(maxEnergyAnim, {
+        toValue: 1.1,
+        duration: 2000,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
+      }).start(() => setShowMaxEnergy(false));
+    }
+  }, [energy]);
 
   const addActivity = (name, change) => {
     const newActivity = {
@@ -161,6 +186,18 @@ const HomeScreen = ({ setTodayActivities }) => {
 
   const energyState = getEnergyLabel(energy);
 
+  const maxEnergyStyle = {
+    opacity: maxEnergyAnim,
+    transform: [
+      {
+        translateY: maxEnergyAnim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [0, -50],
+        }),
+      },
+    ],
+  };
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.safeArea}>
@@ -197,13 +234,21 @@ const HomeScreen = ({ setTodayActivities }) => {
                   else emoji = "❤️";
                   return (
                     <Text
-                      style={[styles.energyText, { color: getEnergyColor(fill) }]}
+                      style={[
+                        styles.energyText,
+                        { color: getEnergyColor(fill) },
+                      ]}
                     >
                       {emoji} {Math.round(fill)}%
                     </Text>
                   );
                 }}
               </AnimatedCircularProgress>
+              {showMaxEnergy && (
+                <Animated.Text style={[styles.maxEnergyText, maxEnergyStyle]}>
+                  YOU ARE AT YOUR PEAK
+                </Animated.Text>
+              )}
             </View>
 
             <Text style={styles.energyMessage}>{energyState.message}</Text>
@@ -243,23 +288,21 @@ const HomeScreen = ({ setTodayActivities }) => {
                       <Text
                         style={[
                           styles.cardText,
-                          { color: item.energyChange >= 0 ? "#2E7D32" : "#C62828" },
+                          {
+                            color:
+                              item.energyChange >= 0 ? "#2E7D32" : "#C62828",
+                          },
                         ]}
                       >
-                        {item.energyChange >= 0 ? `+${item.energyChange}` : item.energyChange}
+                        {item.energyChange >= 0
+                          ? `+${item.energyChange}`
+                          : item.energyChange}
                       </Text>
                     </Card.Content>
                   </Card>
                 </Swipeable>
               ))}
             </View>
-
-            <FAB
-              icon="plus"
-              style={styles.fab}
-              onPress={() => setVisible(true)}
-              color="#75624b"
-            />
 
             {/* Activity Modal */}
             <Portal>
@@ -282,7 +325,8 @@ const HomeScreen = ({ setTodayActivities }) => {
                           setVisible(false);
                         }}
                       >
-                        {item.name} {item.change >= 0 ? `+${item.change}` : item.change}
+                        {item.name}{" "}
+                        {item.change >= 0 ? `+${item.change}` : item.change}
                       </Text>
                     )}
                   />
@@ -292,7 +336,10 @@ const HomeScreen = ({ setTodayActivities }) => {
 
             {/* Mood Modal */}
             <Portal>
-              <Modal visible={showMoodModal} contentContainerStyle={styles.modal}>
+              <Modal
+                visible={showMoodModal}
+                contentContainerStyle={styles.modal}
+              >
                 <Text style={styles.modalTitle}>HOW IS YOUR ENERGY TODAY?</Text>
                 <View style={styles.modalListContainer}>
                   <FlatList
@@ -308,8 +355,14 @@ const HomeScreen = ({ setTodayActivities }) => {
                           setEnergy(item.value);
 
                           await AsyncStorage.setItem("lastMoodDate", today);
-                          await AsyncStorage.setItem("baseEnergy", item.value.toString());
-                          await AsyncStorage.setItem("todayActivities", JSON.stringify([]));
+                          await AsyncStorage.setItem(
+                            "baseEnergy",
+                            item.value.toString(),
+                          );
+                          await AsyncStorage.setItem(
+                            "todayActivities",
+                            JSON.stringify([]),
+                          );
 
                           setShowMoodModal(false);
                         }}
@@ -323,11 +376,16 @@ const HomeScreen = ({ setTodayActivities }) => {
             </Portal>
           </View>
         </ScrollView>
+        <FAB
+          icon="plus"
+          style={styles.fab}
+          onPress={() => setVisible(true)}
+          color="#75624b"
+        />
       </SafeAreaView>
     </SafeAreaProvider>
   );
 };
-
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -341,15 +399,13 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
 
-  // style used for the ScrollView wrapper
   scrollContainer: {
     flex: 1,
   },
 
-  // applied to the ScrollView contentContainer to allow scrolling
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20, // give a little space at the bottom for the FAB etc.
+    paddingBottom: 20,
   },
 
   energyContainer: {
@@ -406,6 +462,12 @@ const styles = StyleSheet.create({
     right: 20,
     bottom: 20,
     backgroundColor: "#F7F7F7",
+    elevation: 8, // Android shadow
+
+    shadowColor: "#000", // iOS shadow
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
   },
 
   modal: {
@@ -424,7 +486,7 @@ const styles = StyleSheet.create({
   },
 
   modalListContainer: {
-    maxHeight: 400, // Adjust: shows roughly 6-8 items, scroll for the rest
+    maxHeight: 400,
     marginTop: 10,
   },
 
@@ -484,8 +546,8 @@ const styles = StyleSheet.create({
     fontFamily: "Montserrat_700Bold",
     fontSize: 16,
     letterSpacing: 2,
-    marginBottom: 2,
-    marginTop:87,
+    marginBottom: 6,
+    marginTop: 50,
   },
   image: {
     width: 70,
@@ -507,6 +569,12 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 46,
     textAlign: "center",
+  },
+  maxEnergyText: {
+    position: "absolute",
+    fontSize: 24,
+    fontFamily: "Montserrat_700Bold",
+    color: "#467948ff",
   },
 });
 
