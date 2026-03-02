@@ -66,15 +66,35 @@ const getEnergyColor = (energy) => {
   return "#c34343ff";
 };
 
+// Start from the base mood, then apply each activity in order.
+// Clamp after every step so energy never goes above 100 or below 0.
+const calcEnergy = (base, activities) => {
+  let energy = base;
+  for (let i = activities.length - 1; i >= 0; i--) {
+    energy = energy + (activities[i].energyChange || 0);
+    if (energy > 100) energy = 100;
+    if (energy < 0) energy = 0;
+  }
+  return energy;
+};
+
 const screenHeight = Dimensions.get("window").height;
 
-const HomeScreen = ({setTodayActivities}) => {
-  const [energy, setEnergy] = useState(0); // displayed energy (base + activities)
-  const [baseEnergy, setBaseEnergy] = useState(0); // mood selected in the morning
+const HomeScreen = ({ setTodayActivities }) => {
+  const [energy, setEnergy] = useState(0);
+  const [baseEnergy, setBaseEnergy] = useState(0);
   const [activities, setActivities] = useState([]);
   const [visible, setVisible] = useState(false);
   const [showMoodModal, setShowMoodModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // prevents energy saving until after the data has been loaded from AsyncStorage; the energy circle will retain its value on reload.
+  const [isLoading, setIsLoading] = useState(true);
+
+  const moods = [
+    { label: "😎 Amazing", value: 95 },
+    { label: "😊 Good", value: 80 },
+    { label: "🙂 Okay", value: 60 },
+    { label: "😴 Tired", value: 40 },
+    { label: "😫 Don't even ask me!", value: 20 },
+  ];
 
   useEffect(() => {
     const loadData = async () => {
@@ -87,17 +107,10 @@ const HomeScreen = ({setTodayActivities}) => {
         const parsedBase = parseInt(savedBase);
         setBaseEnergy(parsedBase);
 
-        const parsedActivities = savedActivities
-          ? JSON.parse(savedActivities)
-          : [];
+        const parsedActivities = savedActivities ? JSON.parse(savedActivities) : [];
         setActivities(parsedActivities);
 
-        const totalChange = parsedActivities.reduce(
-          (sum, a) => sum + (a.energyChange || 0),
-          0,
-        );
-        const display = Math.min(100, Math.max(0, parsedBase + totalChange));
-        setEnergy(display);
+        setEnergy(calcEnergy(parsedBase, parsedActivities));
         setShowMoodModal(false);
       } else {
         setShowMoodModal(true);
@@ -120,42 +133,18 @@ const HomeScreen = ({setTodayActivities}) => {
     setActivities(updatedActivities);
     AsyncStorage.setItem("todayActivities", JSON.stringify(updatedActivities));
 
-    if (setTodayActivities) {
-      setTodayActivities(updatedActivities);
-    }
+    if (setTodayActivities) setTodayActivities(updatedActivities);
 
-    const totalChange = updatedActivities.reduce(
-      (sum, a) => sum + (a.energyChange || 0),
-      0,
-    );
-    const display = Math.min(100, Math.max(0, baseEnergy + totalChange));
-    setEnergy(display);
+    setEnergy(calcEnergy(baseEnergy, updatedActivities));
   };
-
-  const moods = [
-    { label: "😎 Amazing", value: 95 },
-    { label: "😊 Good", value: 80 },
-    { label: "🙂 Okay", value: 60 },
-    { label: "😴 Tired", value: 40 },
-    { label: "😫 Don't even ask me!", value: 20 },
-  ];
 
   const deleteActivity = (id) => {
     setActivities((prev) => {
       const updated = prev.filter((item) => item.id !== id);
       AsyncStorage.setItem("todayActivities", JSON.stringify(updated));
+      if (setTodayActivities) setTodayActivities(updated);
 
-      if (setTodayActivities) {
-        setTodayActivities(updated);
-      }
-
-      const totalChange = updated.reduce(
-        (sum, a) => sum + (a.energyChange || 0),
-        0,
-      );
-      const display = Math.min(100, Math.max(0, baseEnergy + totalChange));
-      setEnergy(display);
-
+      setEnergy(calcEnergy(baseEnergy, updated));
       return updated;
     });
   };
@@ -188,6 +177,7 @@ const HomeScreen = ({setTodayActivities}) => {
             <Text style={styles.energyFeeling}>
               Feeling: {energyState.label}
             </Text>
+
             {/* Energy Meter */}
             <View style={styles.energyContainer}>
               <AnimatedCircularProgress
@@ -198,7 +188,7 @@ const HomeScreen = ({setTodayActivities}) => {
                 backgroundColor="#EAEAEA"
                 rotation={0}
                 lineCap="round"
-                duration={500}
+                duration={600}
               >
                 {(fill) => {
                   let emoji = "⚡"; // default
@@ -207,10 +197,7 @@ const HomeScreen = ({setTodayActivities}) => {
                   else emoji = "❤️";
                   return (
                     <Text
-                      style={[
-                        styles.energyText,
-                        { color: getEnergyColor(fill) },
-                      ]}
+                      style={[styles.energyText, { color: getEnergyColor(fill) }]}
                     >
                       {emoji} {Math.round(fill)}%
                     </Text>
@@ -224,7 +211,7 @@ const HomeScreen = ({setTodayActivities}) => {
             {/* Today’s Activities */}
             <Text style={styles.sectionTitle}>TODAY'S MOVES</Text>
             <View>
-              {activities.length == 0 && (
+              {activities.length === 0 && (
                 <View style={styles.emptyPlaceholder}>
                   <Text style={styles.emptyText}>
                     NO ACTIVITIES SELECTED AT THE MOMENT
@@ -256,14 +243,10 @@ const HomeScreen = ({setTodayActivities}) => {
                       <Text
                         style={[
                           styles.cardText,
-                          {
-                            color:
-                              item.energyChange >= 0 ? "#2E7D32" : "#C62828",
-                          },
+                          { color: item.energyChange >= 0 ? "#2E7D32" : "#C62828" },
                         ]}
                       >
-                        {item.energyChange >= 0 ? "+" : ""}
-                        {item.energyChange}
+                        {item.energyChange >= 0 ? `+${item.energyChange}` : item.energyChange}
                       </Text>
                     </Card.Content>
                   </Card>
@@ -286,7 +269,6 @@ const HomeScreen = ({setTodayActivities}) => {
                 contentContainerStyle={styles.modal}
               >
                 <Text style={styles.modalTitle}>CHOOSE YOUR ACTIVITY</Text>
-
                 <View style={styles.modalListContainer}>
                   <FlatList
                     data={ACTIVITY_OPTIONS}
@@ -300,8 +282,7 @@ const HomeScreen = ({setTodayActivities}) => {
                           setVisible(false);
                         }}
                       >
-                        {item.name}{" "}
-                        {item.change >= 0 ? `+${item.change}` : item.change}
+                        {item.name} {item.change >= 0 ? `+${item.change}` : item.change}
                       </Text>
                     )}
                   />
@@ -311,12 +292,8 @@ const HomeScreen = ({setTodayActivities}) => {
 
             {/* Mood Modal */}
             <Portal>
-              <Modal
-                visible={showMoodModal}
-                contentContainerStyle={styles.modal}
-              >
+              <Modal visible={showMoodModal} contentContainerStyle={styles.modal}>
                 <Text style={styles.modalTitle}>HOW IS YOUR ENERGY TODAY?</Text>
-
                 <View style={styles.modalListContainer}>
                   <FlatList
                     data={moods}
@@ -327,19 +304,12 @@ const HomeScreen = ({setTodayActivities}) => {
                         style={styles.modalActivityItem}
                         onPress={async () => {
                           const today = new Date().toISOString().split("T")[0];
-
                           setBaseEnergy(item.value);
                           setEnergy(item.value);
 
                           await AsyncStorage.setItem("lastMoodDate", today);
-                          await AsyncStorage.setItem(
-                            "baseEnergy",
-                            item.value.toString(),
-                          );
-                          await AsyncStorage.setItem(
-                            "todayActivities",
-                            JSON.stringify([]),
-                          );
+                          await AsyncStorage.setItem("baseEnergy", item.value.toString());
+                          await AsyncStorage.setItem("todayActivities", JSON.stringify([]));
 
                           setShowMoodModal(false);
                         }}
@@ -358,6 +328,7 @@ const HomeScreen = ({setTodayActivities}) => {
   );
 };
 
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -366,7 +337,6 @@ const styles = StyleSheet.create({
 
   container: {
     flex: 1,
-    backgroundColor: "#cec1b1bb",
     paddingHorizontal: 1,
     paddingTop: 20,
   },
@@ -374,7 +344,6 @@ const styles = StyleSheet.create({
   // style used for the ScrollView wrapper
   scrollContainer: {
     flex: 1,
-    backgroundColor: "#cec1b1bb",
   },
 
   // applied to the ScrollView contentContainer to allow scrolling
@@ -391,7 +360,7 @@ const styles = StyleSheet.create({
 
   energyText: {
     fontSize: 40,
-    fontFamily: "Montserrat_400Regular",
+    fontFamily: "Montserrat_700Bold",
   },
 
   sectionTitle: {
@@ -516,11 +485,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 2,
     marginBottom: 2,
-    marginTop:20,
+    marginTop:87,
   },
   image: {
-    width: 80,
-    height: 80,
+    width: 70,
+    height: 70,
     resizeMode: "contain",
   },
   energyFeeling: {

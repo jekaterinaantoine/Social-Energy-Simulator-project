@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { BottomNavigation, Provider } from "react-native-paper";
 import { StyleSheet } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -18,7 +18,7 @@ import InsightsScreen from "./Screens/InsightsScreen";
 import WelcomeScreen from "./Screens/WelcomeScreen";
 
 const App = () => {
-  // Shared state: today’s activities, used by Home & Insights
+  // Shared state: today's activities, used by Home & Insights
   const [todayActivities, setTodayActivities] = useState([]);
   // Welcome screen visibility
   const [showWelcome, setShowWelcome] = useState(true);
@@ -50,20 +50,23 @@ const App = () => {
     ],
   });
 
-  // Prevent render until fonts are available
-  if (!fontsLoaded && !fontError) {
-    return null;
-  }
-
   // Update selected tab
   const handleIndexChange = (index) => setState({ ...state, index });
 
   // Scene mapping: wires navigation tabs to screen components
-  const renderScene = BottomNavigation.SceneMap({
-    home: () => <HomeScreen setTodayActivities={setTodayActivities} />,
-    simulate: SimulateScreen,
-    insights: () => <InsightsScreen activitiesLog={todayActivities} />,
-  });
+  const renderScene = useCallback(({ route }) => {
+    switch (route.key) {
+      case "home": return <HomeScreen setTodayActivities={setTodayActivities} />;
+      case "simulate": return <SimulateScreen />;
+      case "insights": return <InsightsScreen activitiesLog={todayActivities} />;
+      default: return null;
+    }
+  }, [todayActivities]);
+
+  // Prevent render until fonts are available
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   // Show welcome screen first, if enabled
   if (showWelcome) {

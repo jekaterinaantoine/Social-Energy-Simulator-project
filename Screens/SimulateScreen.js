@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import { Card, FAB, Portal, Modal } from "react-native-paper";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 import { Swipeable } from "react-native-gesture-handler";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import ConfettiCannon from "react-native-confetti-cannon";
+import { LinearGradient } from "expo-linear-gradient";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -39,16 +41,35 @@ const SIMULATE_ACTIVITIES = [
   { id: "20", name: "Act of Kindness", change: 15, category: "Social" },
 ];
 
+const getEnergyGradient = (energy) => {
+  if (energy >= 70) return ["#E8F5E9", "#467948a3"]; 
+  if (energy >= 30) return ["#FFF8E1", "#fac062b9"];
+  return ["#FDECEA", "#c34343b7"];
+};
+
 const getEnergyColor = (energy) => {
   if (energy >= 70) return "#467948ff";
   if (energy >= 30) return "#fabf62ff";
   return "#c34343ff";
 };
 
+// Start from the base mood, then apply each activity in order.
+// Clamp after every step so energy never goes above 100 or below 0.
+const calcEnergy = (base, activities) => {
+  let energy = base;
+  for (let i = activities.length - 1; i >= 0; i--) {
+    energy = energy + activities[i].change;
+    if (energy > 100) energy = 100;
+    if (energy < 0) energy = 0;
+  }
+  return energy;
+};
+
 function SimulateScreen() {
   const [baseEnergy, setBaseEnergy] = useState(100);
   const [simEnergy, setSimEnergy] = useState(100);
   const [selectedActivities, setSelectedActivities] = useState([]);
+  const confettiRef = useRef(null);
 
   useEffect(() => {
     const loadEnergy = async () => {
@@ -72,11 +93,7 @@ function SimulateScreen() {
     setSelectedActivities((prev) => {
       const updated = [newItem, ...prev];
 
-      const totalChange = updated.reduce((sum, item) => sum + item.change, 0);
-
-      const newEnergy = Math.min(100, Math.max(0, baseEnergy + totalChange));
-
-      setSimEnergy(newEnergy);
+      setSimEnergy(calcEnergy(baseEnergy, updated));
 
       return updated;
     });
@@ -86,17 +103,17 @@ function SimulateScreen() {
     setSelectedActivities((prev) => {
       const updated = prev.filter((item) => item.uniqueId !== uniqueId);
 
-      const totalChange = updated.reduce((sum, item) => sum + item.change, 0);
-
-      const newEnergy = Math.min(100, Math.max(0, baseEnergy + totalChange));
-
-      setSimEnergy(newEnergy);
+      setSimEnergy(calcEnergy(baseEnergy, updated));
 
       return updated;
     });
   };
 
   return (
+  <LinearGradient
+    colors={getEnergyGradient(simEnergy)}
+    style={{ flex: 1 }}
+  >
     <View style={styles.safeArea}>
       <ScrollView style={styles.scrollContainer}>
         <View style={styles.container}>
@@ -111,7 +128,7 @@ function SimulateScreen() {
               width={10}
               fill={simEnergy}
               tintColor={getEnergyColor(simEnergy)}
-              backgroundColor="#EAEAEA"
+              backgroundColor="#ffffffff"
               rotation={0}
               lineCap="round"
             >
@@ -124,6 +141,14 @@ function SimulateScreen() {
               )}
             </AnimatedCircularProgress>
           </View>
+
+          {simEnergy > 99 && (
+            <ConfettiCannon
+              count={30}
+              origin={{ x: SCREEN_WIDTH / 2, y: 0 }}
+              fadeOut={true}
+            />
+          )}
 
           {/* Horizontal Circular Cards */}
           <Text style={styles.sectionTitle}>AVAILABLE ACTIVITIES</Text>
@@ -139,7 +164,9 @@ function SimulateScreen() {
             scrollEnabled={true}
             renderItem={({ item }) => (
               <TouchableOpacity
-                style={styles.circleCard}
+                style={[
+                  styles.circleCard,
+                ]}
                 onPress={() => addSimActivity(item)}
               >
                 <Text style={styles.circleText}>{item.name}</Text>
@@ -160,8 +187,12 @@ function SimulateScreen() {
           <View>
             {selectedActivities.length == 0 && (
               <View style={styles.emptyPlaceholder}>
-                <Text style={styles.emptyText}>No activities selected at the moment.</Text>
-                <Text style={styles.emptyText}>Select from activites above.</Text>
+                <Text style={styles.emptyText}>
+                  No activities selected at the moment.
+                </Text>
+                <Text style={styles.emptyText}>
+                  Select from activites above.
+                </Text>
               </View>
             )}
             {selectedActivities.map((item) => (
@@ -195,17 +226,16 @@ function SimulateScreen() {
         </View>
       </ScrollView>
     </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#cec1b1bb",
   },
   scrollContainer: {
     flex: 1,
-    backgroundColor: "#cec1b1bb",
   },
   container: {
     paddingTop: 20,
@@ -223,7 +253,7 @@ const styles = StyleSheet.create({
   },
   energyText: {
     fontSize: 30,
-    fontFamily: "Montserrat_400Regular",
+    fontFamily: "Montserrat_700Bold",
   },
   sectionTitle: {
     fontSize: 22,
@@ -243,36 +273,34 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   circleCard: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#EAEAEA",
-    marginHorizontal: 2,
+    width: 130,
+    height: 130,
+    borderRadius: 70,
+    backgroundColor: "#ffffffff",
+    marginHorizontal: 3,
     marginTop: -10,
     marginBottom: 20,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#EAEAEA",
   },
   circleText: {
     fontSize: 16,
     fontFamily: "Montserrat_400Regular",
     textAlign: "center",
     color: "#75624b",
-    justifyContent:'center',
+    justifyContent: "center",
   },
   circleEnergy: {
     fontSize: 16,
     marginTop: 4,
-    fontFamily: "Montserrat_400Regular",
+    fontFamily: "Montserrat_700Bold",
   },
   card: {
     marginBottom: 2,
     borderRadius: 0,
-    backgroundColor: "#EAEAEA",
+    backgroundColor: "#ffffffff",
     borderWidth: 1,
-    borderColor: "#EAEAEA",
+    borderColor: "#ffffffff",
   },
   cardContent: {
     flexDirection: "row",
@@ -310,6 +338,7 @@ const styles = StyleSheet.create({
     color: "#75624b",
     fontFamily: "Montserrat_400Regular",
     fontSize: 16,
+    letterSpacing: 2,
   },
 });
 

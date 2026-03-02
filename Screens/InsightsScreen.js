@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
   },
 
   bigNumber: {
-    fontSize: 32,
+    fontSize: 40,
     textAlign: "center",
   },
 
