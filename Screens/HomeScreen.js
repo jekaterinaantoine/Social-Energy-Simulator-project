@@ -73,8 +73,6 @@ const getEnergyColor = (energy) => {
   return "#c34343ff";
 };
 
-// Start from the base mood, then apply each activity in order.
-// Clamp after every step so energy never goes above 100 or below 0.
 const calcEnergy = (base, activities) => {
   let energy = base;
   for (let i = activities.length - 1; i >= 0; i--) {
@@ -86,6 +84,72 @@ const calcEnergy = (base, activities) => {
 };
 
 const screenHeight = Dimensions.get("window").height;
+
+const AnimatedBoostBurn = () => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const colorAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const scaleLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.2,
+          duration: 500,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.ease),
+        }),
+      ]),
+    );
+
+    const colorLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(colorAnim, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: false,
+        }),
+        Animated.timing(colorAnim, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: false,
+        }),
+      ]),
+    );
+
+    scaleLoop.start();
+    colorLoop.start();
+
+    return () => {
+      scaleLoop.stop();
+      colorLoop.stop();
+    };
+  }, []);
+
+  const interpolatedColor = colorAnim.interpolat;
+
+  return (
+    <Animated.Text
+      style={{
+        fontFamily: "Montserrat_700Bold",
+        fontSize: 16,
+        letterSpacing: 2,
+        textAlign: "center",
+        marginTop: 10,
+        marginBottom: 6,
+        transform: [{ scale: scaleAnim }],
+        color: "#75624b",
+      }}
+    >
+      BOOST OR BURN?
+    </Animated.Text>
+  );
+};
 
 const HomeScreen = ({ setTodayActivities }) => {
   const [energy, setEnergy] = useState(0);
@@ -168,7 +232,6 @@ const HomeScreen = ({ setTodayActivities }) => {
       const updated = prev.filter((item) => item.id !== id);
       AsyncStorage.setItem("todayActivities", JSON.stringify(updated));
       if (setTodayActivities) setTodayActivities(updated);
-
       setEnergy(calcEnergy(baseEnergy, updated));
       return updated;
     });
@@ -222,13 +285,13 @@ const HomeScreen = ({ setTodayActivities }) => {
                 width={16}
                 fill={energy}
                 tintColor={getEnergyColor(energy)}
-                backgroundColor="#EAEAEA"
+                backgroundColor="#ffffffff"
                 rotation={0}
                 lineCap="round"
                 duration={600}
               >
                 {(fill) => {
-                  let emoji = "⚡"; // default
+                  let emoji = "⚡";
                   if (fill >= 70) emoji = "💚";
                   else if (fill >= 30) emoji = "💛";
                   else emoji = "❤️";
@@ -253,23 +316,25 @@ const HomeScreen = ({ setTodayActivities }) => {
 
             <Text style={styles.energyMessage}>{energyState.message}</Text>
 
-            {/* Today’s Activities */}
+            {/* Today's Activities */}
             <Text style={styles.sectionTitle}>TODAY'S MOVES</Text>
             <View>
+              {/* ✅ Single, clean empty state block */}
               {activities.length === 0 && (
                 <View style={styles.emptyPlaceholder}>
                   <Text style={styles.emptyText}>
                     NO ACTIVITIES SELECTED AT THE MOMENT
                   </Text>
                   <View style={styles.emptyContent}>
-                    <Text style={styles.emptyQuestion}>BOOST OR BURN?</Text>
                     <Image
                       source={require("../assets/pics/smirk.png")}
                       style={styles.image}
                     />
+                    <AnimatedBoostBurn />
                   </View>
                 </View>
               )}
+
               {activities.map((item) => (
                 <Swipeable
                   key={item.id}
@@ -390,35 +455,29 @@ const HomeScreen = ({ setTodayActivities }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#cec1b1bb",
+    backgroundColor: "#f3e7d8ff",
   },
-
   container: {
     flex: 1,
     paddingHorizontal: 1,
     paddingTop: 20,
   },
-
   scrollContainer: {
     flex: 1,
   },
-
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 20,
   },
-
   energyContainer: {
     alignItems: "center",
     marginBottom: 8,
     marginTop: 0,
   },
-
   energyText: {
     fontSize: 40,
     fontFamily: "Montserrat_700Bold",
   },
-
   sectionTitle: {
     fontSize: 22,
     fontFamily: "Montserrat_700Bold",
@@ -427,7 +486,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 2,
   },
-
   sectionText: {
     fontSize: 12,
     fontFamily: "Montserrat_400Regular",
@@ -437,46 +495,39 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 2,
   },
-
   card: {
     marginBottom: 1,
     borderRadius: 0,
-    backgroundColor: "#EAEAEA",
+    backgroundColor: "#ffffffff",
   },
-
   cardContent: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-
   cardText: {
     fontSize: 16,
     fontFamily: "Montserrat_400Regular",
     color: "#75624b",
     letterSpacing: 2,
   },
-
   fab: {
     position: "absolute",
     right: 20,
     bottom: 20,
     backgroundColor: "#F7F7F7",
-    elevation: 8, // Android shadow
-
-    shadowColor: "#000", // iOS shadow
+    elevation: 8,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.18,
     shadowRadius: 6,
   },
-
   modal: {
     backgroundColor: "#e9e2dabb",
     padding: 20,
     margin: 20,
     borderRadius: 12,
   },
-
   modalTitle: {
     fontSize: 16,
     fontFamily: "Montserrat_400Regular",
@@ -484,12 +535,10 @@ const styles = StyleSheet.create({
     color: "#75624b",
     letterSpacing: 2,
   },
-
   modalListContainer: {
     maxHeight: 400,
     marginTop: 10,
   },
-
   modalActivityItem: {
     fontFamily: "Montserrat_400Regular",
     fontSize: 16,
@@ -498,7 +547,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#75624b",
   },
-
   optionCard: {
     marginBottom: 10,
     borderRadius: 30,
@@ -506,7 +554,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#EAEAEA",
   },
-
   deleteButton: {
     backgroundColor: "#c34343ff",
     justifyContent: "center",
@@ -516,7 +563,6 @@ const styles = StyleSheet.create({
     marginBottom: 1,
     marginTop: 1,
   },
-
   deleteButtonText: {
     color: "#fff",
     fontWeight: "bold",
@@ -541,18 +587,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     letterSpacing: 2,
   },
-  emptyQuestion: {
-    color: "#75624b",
-    fontFamily: "Montserrat_700Bold",
-    fontSize: 16,
-    letterSpacing: 2,
-    marginBottom: 6,
-    marginTop: 50,
-  },
   image: {
     width: 70,
     height: 70,
     resizeMode: "contain",
+    marginTop: 40,
   },
   energyFeeling: {
     color: "#75624b",

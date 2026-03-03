@@ -42,9 +42,9 @@ const SIMULATE_ACTIVITIES = [
 ];
 
 const getEnergyGradient = (energy) => {
-  if (energy >= 70) return ["#E8F5E9", "#467948a3"]; 
-  if (energy >= 30) return ["#FFF8E1", "#fac062b9"];
-  return ["#FDECEA", "#c34343b7"];
+  if (energy >= 70) return ["#E8F5E9", "#339636cf"]; 
+  if (energy >= 30) return ["#FFF8E1", "#ffae00b9"];
+  return ["#FDECEA", "#c60606d0"];
 };
 
 const getEnergyColor = (energy) => {
