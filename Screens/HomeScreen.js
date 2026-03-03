@@ -285,7 +285,7 @@ const HomeScreen = ({ setTodayActivities }) => {
                 width={16}
                 fill={energy}
                 tintColor={getEnergyColor(energy)}
-                backgroundColor="#ffffffff"
+                backgroundColor="#F7F7F7"
                 rotation={0}
                 lineCap="round"
                 duration={600}
@@ -455,7 +455,7 @@ const HomeScreen = ({ setTodayActivities }) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#f3e7d8ff",
+    backgroundColor: "#e9e2daff",
   },
   container: {
     flex: 1,
@@ -496,9 +496,9 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   card: {
-    marginBottom: 1,
+    marginBottom: 2,
     borderRadius: 0,
-    backgroundColor: "#ffffffff",
+    backgroundColor: "#F7F7F7",
   },
   cardContent: {
     flexDirection: "row",

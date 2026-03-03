@@ -42,7 +42,7 @@ const SIMULATE_ACTIVITIES = [
 ];
 
 const getEnergyGradient = (energy) => {
-  if (energy >= 70) return ["#E8F5E9", "#339636cf"]; 
+  if (energy >= 70) return ["#E8F5E9", "#067e0acf"]; 
   if (energy >= 30) return ["#FFF8E1", "#ffae00b9"];
   return ["#FDECEA", "#c60606d0"];
 };
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     width: 130,
     height: 130,
     borderRadius: 70,
-    backgroundColor: "#ffffffff",
+    backgroundColor: "#F7F7F7",
     marginHorizontal: 3,
     marginTop: -10,
     marginBottom: 20,
@@ -298,9 +298,9 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 2,
     borderRadius: 0,
-    backgroundColor: "#ffffffff",
+    backgroundColor: "#F7F7F7",
     borderWidth: 1,
-    borderColor: "#ffffffff",
+    borderColor: "#F7F7F7",
   },
   cardContent: {
     flexDirection: "row",

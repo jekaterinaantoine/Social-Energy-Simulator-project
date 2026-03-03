@@ -76,7 +76,7 @@ function InsightsScreen({ activitiesLog = [] }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f3e7d8ff",
+    backgroundColor: "#e9e2daff",
     padding: 20,
   },
 
