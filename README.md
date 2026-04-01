@@ -1,4 +1,4 @@
-# ⚡ Social Energy Simulator
+# ⚡ Boost&Burn — Social Energy Simulator
 A mobile app built with React Native and Expo that helps you track your daily energy levels, log activities, and understand what boosts or drains you throughout the day.
 
 ---
